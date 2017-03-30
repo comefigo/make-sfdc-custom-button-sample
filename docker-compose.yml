@@ -1,0 +1,20 @@
+version: '2'
+services:
+  proxy:
+    build: ./proxy
+    image: proxy
+    ports:
+      - "3123:3123"
+    container_name: proxy
+  app:
+    build: ./app
+    image: app
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./app/static:/usr/src/app/static"
+    container_name: app
+    depends_on:
+      -  proxy
+    environment:
+      - PORT=3000

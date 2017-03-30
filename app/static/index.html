@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <title>create salesforce custom button sample</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <script src="./lib/vue/dist/vue.min.js"></script>
+    <script src="./lib/jsforce/build/jsforce.min.js"></script>
+    <script src="./js/jsforce.config.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <h1>create salesforce custombutton from jsforce</h1>
+        <h3>オブジェクト名：</h3>
+        <select v-model="btnObject">
+            <OPTION value="Account" selected>取引先</OPTION>
+            <OPTION value="Lead">リード</OPTION>
+            <OPTION value="Contact">取引先責任者</OPTION>
+        </select>
+        <h3>ボタンAPI名：</h3>
+        <input type="text" v-model="btnName">
+        <h3>ボタンラベル名：</h3>
+        <input type="text" v-model="btnLabel">
+        <br/>
+        <button onclick="makebutton();">button作成</button>
+    </div>
+</body>
+
+<script>
+    let connected = false;
+    jsforce.browser.on('connect', function() {
+        connected = true;
+        console.log('connected sfdc by jsforce.');
+    });
+
+    // 対象オブジェクト
+    const btnConfig = new Vue({
+        el: '#app',
+        data: {
+            btnObject: 'Account',
+            btnName: '',
+            btnLabel: ''
+        }
+    });
+
+    // ボタン作成
+    function makebutton() {
+        if(!btnConfig.btnObject || !btnConfig.btnName || !btnConfig.btnLabel || !connected) {
+            return false;
+        }
+
+        jsfConn.metadata.upsert('WebLink', [new WebLinkObject(btnConfig.btnObject, btnConfig.btnName, btnConfig.btnLabel)]).then(function(result) {
+            console.log(result);
+        }).catch(function(error) {
+            console.error(error);
+        });
+    }
+
+    // カスタムボタン用のオブジェクト
+    function WebLinkObject(strObjectName, strBtnName, strBtnLabel) {
+        // オブジェクト名.ボタン名がfullNameになる
+        this.fullName = strObjectName + '.' + strBtnName;
+        this.availability = 'online';
+        // massActionButton   リストビューのボタン
+        // button   詳細画面のボタン
+        this.displayType = 'button';
+        this.encodingKey = 'UTF-8';
+        this.linkType = "javascript";
+        this.masterLabel = strBtnLabel;
+        this.openType = "onClickJavaScript";
+        this.protected = false;
+        this.url = 'console.log(\' click custom button ! \')';
+        this.description = 'description of custom button.';
+    }
+</script>
+
+</html>

@@ -1,0 +1,28 @@
+{
+    "name": "proxy-server-for-development-sfdc-app",
+    "version": "1.0.0",
+    "description": "proxy server for development sfdc app.",
+    "main": "app.js",
+    "scripts": {
+        "start": "node ./app.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+ssh://git@github.com/comefigo/local-prototyping-sfdc-app-sample.git"
+    },
+    "keywords": [
+        "salesforce",
+        "jsforce",
+        "docker"
+    ],
+    "author": "comefigo",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/comefigo/local-prototyping-sfdc-app-sample/issues"
+    },
+    "homepage": "https://github.com/comefigo/local-prototyping-sfdc-app-sample#readme",
+    "dependencies": {
+        "express": "^4.14.1",
+        "jsforce-ajax-proxy": "^1.0.0"
+    }
+}

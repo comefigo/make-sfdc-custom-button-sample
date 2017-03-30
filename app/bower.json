@@ -1,0 +1,27 @@
+{
+  "name": "make sfdc custom button sample app",
+  "description": "make sfdc custom button with jsforce.",
+  "main": "index.html",
+  "authors": [
+    "comefigo"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "salesforce",
+    "force.com",
+    "jsforce",
+    "vue"
+  ],
+  "homepage": "https://github.com/comefigo/make-sfdc-custom-button-sample",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "static/lib",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jsforce": "^1.7.1",
+    "vue": "^2.2.6"
+  }
+}
