@@ -1,83 +1,132 @@
-# prototyping-sfdc-app-sample
-
 # 概要
 
-ローカル環境でJsforceを通じてSalesforce APIを利用しながら、SPAなアプリケーションを開発する
-ローカル環境で開発する際に必要なプロキシサーバをDockerで一元管理することで、
-初心者でも簡単にローカルでの開発環境を構築することができると思います。
-（Dockerのインストールと起動だけを意識して頂ければ・・・）
+メタデータAPIから動的にカスタムボタン（リンク）を作る方法をご紹介します
 
-# 準備
+# 方法
 
-## Docker
+JSfoceを経由してMetadataApiでカスタムボタンを作ります
+作り方はパラメータを渡すだけでハマるところはないですが、ボタンのfullNameに何を入れていいのかがわからなかった
+また、名前空間がある組織では名前空間名を含めてあげる必要がところがポイントです
 
-1. [Docker](https://www.docker.com/products/docker)をインストール
-2. ドライブの共有設定  
-   開発ソースが保存されているドライブの共有設定を有効に設定
+※サンプルコードのままでは名前空間に対応していないため、修正してから使ってください
+　名前空間を含める箇所はソースコードに記載してあります
 
-![1.png](https://qiita-image-store.s3.amazonaws.com/0/30522/23749159-9dbf-18db-6088-85e51bb39d92.png)
+# サンプルコード
 
+[こちら](https://github.com/comefigo/make-sfdc-custom-button-sample)をベースに紹介したいと思います
 
-## OAuth設定
+Visualforce Pageで試す方法と無駄にDockerでローカルから試す方法を用意していますｗ
 
-ローカルの開発環境からSFDCに認証するために、SFDCのOAuth設定をします
-設定が反映させるまで最大10分かかります
+- Visualforceの場合は「src」-「pages」-「MakeCustomButtonSample.page」を参照してください
+- ローカル with Dockerは「app」-「static」-「index.html」を参照してください  
+  Docker版の使い方は[ローカルでSalesforce アプリケーション開発 with Docker](http://qiita.com/comefigo/items/d819f8bb36d3b404204a)をご参照ください
 
-### 1. 新規接続アプリケーションの作成
-![0.png](https://qiita-image-store.s3.amazonaws.com/0/30522/d8521fb5-69a8-fcc5-8ec6-e21d36862c21.png)
+```visualforce:MakeCustomButtonSample.page
+<apex:page standardStylesheets="false" showHeader="false" sidebar="false">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.2.6/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsforce/1.7.1/jsforce.min.js"></script>
+    
+    <div id="app">
+        <h1>create salesforce custombutton from jsforce</h1>
+        <h1 v-if="ok" style="color: #4cae4c;">succeeded !!</h1>
+        <h1 v-if="ng" style="color: #d43f3a;">faild... plz check console log</h1>
 
-### 2. OAuth設定
-
-- コールバックURLはローカル環境のWebサーバのURLを指定してください（デフォルトはhttp://localhost:3000/）
-- OAuth範囲は「データへのアクセスと管理」
-- Webアプリケーション設定の開始URL（デフォルトはhttp://localhost:3000/）
-![1.png](https://qiita-image-store.s3.amazonaws.com/0/30522/b3524c68-d199-7936-7e12-63f63b3158a8.png)
-
-### 3. 認証情報の保存
-
-「app」-「static」-「js」-「jsforce.config.js」に手順2で保存後に表示されるコンシューマー鍵をclientIdに上書きしてください
-
+        <h3>オブジェクト名：</h3>
+        <select v-model="btnObject">
+            <OPTION value="Account" selected="selected">取引先</OPTION>
+            <OPTION value="Lead">リード</OPTION>
+            <OPTION value="Contact">取引先責任者</OPTION>
+        </select>
+        <h3>ボタンAPI名：</h3>
+        <input type="text" v-model="btnName"/>
+        <h3>ボタンラベル名：</h3>
+        <input type="text" v-model="btnLabel"/>
+        <br/>
+        <button onclick="makeButton();">button作成</button>
+        <button onclick="deleteButton();">button削除</button>
+    </div>
+    
+    <script>
+        jsfConn = new jsforce.Connection({ accessToken: '{!$Api.Session_Id}'});
+    
+        // 対象オブジェクト
+        const btnConfig = new Vue({
+            el: '#app',
+            data: {
+                btnObject: 'Account',
+                btnName: '',
+                btnLabel: '',
+                ok: false,
+                ng: false
+            }
+        });
+    
+        function init() {
+            btnConfig.ng = false;
+            btnConfig.ok = false;
+        }
+    
+        // ボタン作成
+        function makeButton() {
+            init();
+            if(!btnConfig.btnObject || !btnConfig.btnName || !btnConfig.btnLabel || !connected) {
+                return false;
+            }
+    
+            jsfConn.metadata.upsert('WebLink', [new WebLinkObject(btnConfig.btnObject, btnConfig.btnName, btnConfig.btnLabel)]).then(function(result) {
+                console.log(result);
+                result.success ? btnConfig.ok = result.success : btnConfig.ng = !result.success;
+            }).catch(function(error) {
+                console.error(error);
+                btnConfig.ng = true;
+            });
+        }
+    
+        // ボタン削除
+        function deleteButton() {
+            init();
+            jsfConn.metadata.delete('WebLink', [btnConfig.btnObject + '.' + btnConfig.btnName], function(err, result) {
+                console.log(result);
+                result.success ? btnConfig.ok = result.success : btnConfig.ng = !result.success;
+            }).catch(function(error) {
+                console.error(error);
+                btnConfig.ng = true;
+            });
+        }
+    
+        // カスタムボタン用のオブジェクト
+        function WebLinkObject(strObjectName, strBtnName, strBtnLabel) {
+            // fullNameの基本形式は「オブジェクト名.ボタンAPI名」
+            //
+            // 名前空間を所有する組織では、
+            // カスタムオブジェクト名とボタンAPI名に名前空間名を含める必要があります
+            // 「名前空間名__カスタムオブジェクト名.名前空間名__ボタンAPI名」になります
+            // 標準オブジェクトが対象の場合は、
+            // 「オブジェクト名.名前空間名__ボタンAPI名」になります
+            // 
+            //   ※新規作成時は「オブジェクト名.ボタンAPI名」のみで問題ないが、
+            //     編集・削除時には名前空間名を含めたfullNameであること
+            this.fullName = strObjectName + '.' + strBtnName;
+            this.availability = 'online';
+            // massActionButton   リストビューのボタン
+            // button   詳細画面のボタン
+            this.displayType = 'button';
+            this.encodingKey = 'UTF-8';
+            this.linkType = "javascript";
+            this.masterLabel = strBtnLabel;
+            this.openType = "onClickJavaScript";
+            this.protected = false;
+            // javascriptコード
+            this.url = 'console.log(\' click custom button ! \')';
+            this.description = 'description of custom button.';
+        }
+    </script>
+</apex:page>
 ```
-if (!jsfConn) {
-    jsforce.browser.init({
-        clientId: 'salesforce コンシューマ鍵',
-        redirectUri: 'http://localhost:3000/',
-        proxyUrl: 'http://localhost:3123/proxy/'
-    });
-    var jsfConn = jsforce.browser.connection;
 
-    // アクセストークンがない場合は、認証
-    if (!jsfConn.accessToken) {
-        jsforce.browser.login();
-    }
-}
-```
+# WebLinkのリファレンス
 
-## プロキシサーバとWebサーバの起動
+https://developer.salesforce.com/docs/atlas.ja-jp.206.0.api_meta.meta/api_meta/meta_weblink.htm?search_text=weblink
 
-ルートディレクトリで以下のコマンドを実行
 
-```
-> docker-compose up -d
-```
 
-これだけです！
-これで開発用のプロキシーサーバとWebサーバが起動します！
-
-## アプリケーションの開発
-
-「app」-「static」配下がWebアプリケーションの公開ディレクトリになります
-
-## サンプルコードを動かすには
-
-appフォルダ配下で以下のコマンドを実行
-
-```
-bower install
-```
-
-# 参考にしたサイト
-
-- [jsforce](https://jsforce.github.io/)
-- [jsforce ajax proxy](https://github.com/jsforce/jsforce-ajax-proxy)
-- [tyoshikawa1106のブログ](http://tyoshikawa1106.hatenablog.com/entry/2016/03/17/011316)
